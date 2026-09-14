@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class RegisterPageController {
 
+	// main
     @GetMapping("/")
     public String showRegisterForm() {
         return "customer-register"; 

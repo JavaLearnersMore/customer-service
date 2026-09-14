@@ -15,6 +15,7 @@ import com.example.model.VerifyOtpRequest;
 import com.example.service.AuthService;
 
 @RestController
+// login 
 @RequestMapping("/api/v1")
 public class AuthController {
 
