@@ -6,7 +6,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Customer Registration</title>
+    <title>Customer Service Registration</title>
 
     <style>
         * { box-sizing: border-box; }
