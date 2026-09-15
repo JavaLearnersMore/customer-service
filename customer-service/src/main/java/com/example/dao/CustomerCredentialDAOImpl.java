@@ -28,14 +28,7 @@ public class CustomerCredentialDAOImpl implements CustomerCredentialDAO {
                 credential.getMpinHash()
         );
     }
-
-//    @Override
-//    public String findMpinHashByCustomerId(Long customerId) {
-//        String sql = "SELECT mpin_hash FROM customer_credential WHERE customer_id = ?";
-//        List<String> results = jdbcTemplate.query(sql, (rs, rowNum) -> rs.getString("mpin_hash"), customerId);
-//        return results.isEmpty() ? null : results.get(0);
-//    }
-
+    
     @Override
     public int updateMpinHash(Long customerId, String newMpinHash) {
         String sql = "UPDATE customer_credential SET mpin_hash = ? WHERE customer_id = ?";

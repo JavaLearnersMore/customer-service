@@ -112,8 +112,52 @@
             border-radius: 6px; cursor: pointer;
         }
         .action-btn:hover { background: #5e35b1; }
+        .section-label {
+            text-transform: uppercase;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #888;
+            margin: 35px 0 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .beneficiaries-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        .beneficiaries-row .container {
+            width: auto;
+        }
+        .bene-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .bene-list-item .bene-status {
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        .bene-status.PENDING { background: #fff3cd; color: #856404; }
+        .bene-status.ACTIVE { background: #d1e7dd; color: #0f5132; }
+        .delete-btn {
+            padding: 10px 20px; background: #dc3545; border: none;
+            color: white; font-size: 14px; font-weight: bold;
+            border-radius: 6px; cursor: pointer;
+        }
+        .delete-btn:hover { background: #bb2d3b; }
         @media(max-width: 900px) {
             .profile-accounts-row { grid-template-columns: 1fr; }
+            .beneficiaries-row { grid-template-columns: 1fr; }
         }
         @media(max-width: 650px) {
             .container { width: 90%; padding: 25px; }
@@ -292,6 +336,7 @@
 
         <form id="changeMpinForm">
             <div class="form-group">
+            <input type="text" id="mpinCustomerId" name="customerId" placeholder="Customer ID" required />
                 <label>Current MPIN</label>
                 <input type="password" name="currentMpin" placeholder="Current 4 digit MPIN" maxlength="4" pattern="[0-9]{4}" required>
             </div>
@@ -304,6 +349,51 @@
 
         <div id="changeMpinMessageBox"></div>
         <div id="changeMpinResponseBox"></div>
+    </div>
+
+</div>
+
+<div class="section-label">Beneficiaries</div>
+
+<div class="beneficiaries-row">
+
+    <div class="container">
+        <h2>Add Beneficiary</h2>
+
+        <form id="addBeneficiaryForm">
+            <div class="form-group">
+                <label>Beneficiary Name</label>
+                <input type="text" name="beneName" placeholder="e.g. Jane's Shop" required>
+            </div>
+            <div class="form-group">
+                <label>Account Number</label>
+                <input type="text" name="accountNumber" placeholder="e.g. NODAL-MERCHANT-1001" required>
+            </div>
+            <div class="form-group">
+                <label>IFSC</label>
+                <input type="text" name="ifsc" placeholder="e.g. NETB0000001" required>
+            </div>
+            <button type="submit" class="action-btn">Add Beneficiary</button>
+        </form>
+
+        <div id="addBeneficiaryMessageBox"></div>
+        <div id="addBeneficiaryResponseBox"></div>
+    </div>
+
+    <div class="container">
+        <h2>List / Delete Beneficiaries</h2>
+
+        <button type="button" class="action-btn" id="listBeneficiariesBtn">List Beneficiaries</button>
+        <div id="beneficiariesListBox"></div>
+
+        <div class="form-group" style="margin-top: 18px;">
+            <label>Beneficiary ID to delete</label>
+            <input type="text" id="deleteBeneficiaryIdInput" placeholder="e.g. 301">
+        </div>
+        <button type="button" class="delete-btn" id="deleteBeneficiaryBtn">Delete</button>
+
+        <div id="deleteBeneficiaryMessageBox"></div>
+        <div id="deleteBeneficiaryResponseBox"></div>
     </div>
 
 </div>
@@ -532,6 +622,7 @@ document.getElementById('changeMpinForm').addEventListener('submit', async funct
     const messageBox = document.getElementById('changeMpinMessageBox');
     const responseBox = document.getElementById('changeMpinResponseBox');
     const customerId = sessionStorage.getItem('customerId');
+//     const customerId = data.customerId; 
 
     if (!customerId) {
         messageBox.innerHTML = '<div class="message error">Please verify OTP first to get a customerId.</div>';
@@ -542,11 +633,15 @@ document.getElementById('changeMpinForm').addEventListener('submit', async funct
     responseBox.innerHTML = '';
 
     try {
-        const response = await fetch('${pageContext.request.contextPath}/api/v1/profile/mpin?customerId=' + encodeURIComponent(customerId), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
+    	const response = await fetch('${pageContext.request.contextPath}/api/v1/profile/mpin', {
+    	    method: 'PUT',
+    	    headers: { 'Content-Type': 'application/json' },
+    	    body: JSON.stringify({
+    	        customerId: customerId,
+    	        currentMpin: data.currentMpin,
+    	        newMpin: data.newMpin
+    	    })
+    	});
 
         const result = await response.json();
 
@@ -555,6 +650,132 @@ document.getElementById('changeMpinForm').addEventListener('submit', async funct
             form.reset();
         } else {
             messageBox.innerHTML = '<div class="message error">' + (result.error || 'Failed to change MPIN') + '</div>';
+        }
+        responseBox.innerHTML =
+            '<div class="response-label">RESPONSE &mdash; ' + response.status + '</div>' +
+            '<pre class="response-json">' + JSON.stringify(result, null, 2) + '</pre>';
+    } catch (err) {
+        messageBox.innerHTML = '<div class="message error">Something went wrong: ' + err.message + '</div>';
+    }
+});
+
+/* ===================== ADD BENEFICIARY ===================== */
+document.getElementById('addBeneficiaryForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form).entries());
+    const messageBox = document.getElementById('addBeneficiaryMessageBox');
+    const responseBox = document.getElementById('addBeneficiaryResponseBox');
+    const customerId = sessionStorage.getItem('customerId');
+
+    if (!customerId) {
+        messageBox.innerHTML = '<div class="message error">Please verify OTP first to get a customerId.</div>';
+        return;
+    }
+
+    messageBox.innerHTML = '<div class="message">Submitting...</div>';
+    responseBox.innerHTML = '';
+
+    try {
+        const response = await fetch('${pageContext.request.contextPath}/api/v1/beneficiaries?customerId=' + encodeURIComponent(customerId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                beneName: data.beneName,
+                accountNumber: data.accountNumber,
+                ifsc: data.ifsc
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            messageBox.innerHTML = '<div class="message success">Beneficiary added</div>';
+            form.reset();
+        } else {
+            messageBox.innerHTML = '<div class="message error">' + (result.error || 'Failed to add beneficiary') + '</div>';
+        }
+        responseBox.innerHTML =
+            '<div class="response-label">RESPONSE &mdash; ' + response.status + '</div>' +
+            '<pre class="response-json">' + JSON.stringify(result, null, 2) + '</pre>';
+    } catch (err) {
+        messageBox.innerHTML = '<div class="message error">Something went wrong: ' + err.message + '</div>';
+    }
+});
+
+/* ===================== LIST BENEFICIARIES ===================== */
+document.getElementById('listBeneficiariesBtn').addEventListener('click', async function () {
+    const listBox = document.getElementById('beneficiariesListBox');
+    const customerId = sessionStorage.getItem('customerId');
+
+    if (!customerId) {
+        listBox.innerHTML = '<div class="message error">Please verify OTP first to get a customerId.</div>';
+        return;
+    }
+
+    listBox.innerHTML = '<div class="message">Loading...</div>';
+
+    try {
+        const response = await fetch('${pageContext.request.contextPath}/api/v1/beneficiaries?customerId=' + encodeURIComponent(customerId), {
+            method: 'GET'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            if (Array.isArray(result) && result.length > 0) {
+                listBox.innerHTML = result.map(function (b) {
+                    return '<div class="bene-list-item">' +
+                        '<span>#' + b.id + ' &mdash; ' + b.beneName + ' (' + b.accountNumber + ')' +
+                        '<span class="bene-status ' + b.status + '">' + b.status + '</span></span>' +
+                        '</div>';
+                }).join('');
+            } else {
+                listBox.innerHTML = '<div class="message">No beneficiaries found.</div>';
+            }
+        } else {
+            listBox.innerHTML = '<div class="message error">' + (result.error || 'Failed to load beneficiaries') + '</div>';
+        }
+    } catch (err) {
+        listBox.innerHTML = '<div class="message error">Something went wrong: ' + err.message + '</div>';
+    }
+});
+
+/* ===================== DELETE BENEFICIARY ===================== */
+document.getElementById('deleteBeneficiaryBtn').addEventListener('click', async function () {
+    const messageBox = document.getElementById('deleteBeneficiaryMessageBox');
+    const responseBox = document.getElementById('deleteBeneficiaryResponseBox');
+    const customerId = sessionStorage.getItem('customerId');
+    const beneficiaryId = document.getElementById('deleteBeneficiaryIdInput').value.trim();
+
+    if (!customerId) {
+        messageBox.innerHTML = '<div class="message error">Please verify OTP first to get a customerId.</div>';
+        return;
+    }
+    if (!beneficiaryId) {
+        messageBox.innerHTML = '<div class="message error">Please enter a Beneficiary ID.</div>';
+        return;
+    }
+
+    messageBox.innerHTML = '<div class="message">Deleting...</div>';
+    responseBox.innerHTML = '';
+
+    try {
+        const response = await fetch('${pageContext.request.contextPath}/api/v1/beneficiaries/' + encodeURIComponent(beneficiaryId) + '?customerId=' + encodeURIComponent(customerId), {
+            method: 'DELETE'
+        });
+
+        let result = {};
+        try { result = await response.json(); } catch (e) { 
+        	
+        }
+
+        if (response.ok) {
+            messageBox.innerHTML = '<div class="message success">Beneficiary deleted</div>';
+            document.getElementById('deleteBeneficiaryIdInput').value = '';
+        } else {
+            messageBox.innerHTML = '<div class="message error">' + (result.error || 'Failed to delete beneficiary') + '</div>';
         }
         responseBox.innerHTML =
             '<div class="response-label">RESPONSE &mdash; ' + response.status + '</div>' +

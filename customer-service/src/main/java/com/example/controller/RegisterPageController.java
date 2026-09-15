@@ -8,7 +8,7 @@ public class RegisterPageController {
 
 	// main
     @GetMapping("/")
-    public String showRegisterForm() {
+    public String showRegisterForm(){
         return "customer-register"; 
     }
 }
